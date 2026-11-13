@@ -10,7 +10,7 @@ Redação e Gramática em uma experiência simples, organizada e feita para o ce
 
 ## Um caminho claro até sua vaga
 
-Recupere seu cadastro pela matrícula e celular ou comece como aluno novo. Confira os dados do aluno e responsáveis, escolha as turmas, leia os informativos e revise tudo antes de confirmar.
+Recupere seu cadastro pela matrícula, com validação por data de nascimento ou comece como aluno novo. Confira os dados do aluno e responsáveis, escolha as turmas, leia os informativos e revise tudo antes de confirmar.
 
 ## Aulas de férias
 
