@@ -1,0 +1,15 @@
+{
+  "name": "matriculacursoredacaoferias",
+  "main": "src/public-worker.js",
+  "compatibility_date": "2026-11-13",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "matriculas-ferias"
+    }
+  ]
+}

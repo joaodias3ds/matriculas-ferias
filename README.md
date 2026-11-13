@@ -4,7 +4,7 @@
 
 Redação e Gramática em uma experiência simples, organizada e feita para o celular.
 
-[**Fazer matrícula →**](https://matriculas-ferias.jmdias2901.workers.dev) · [Painel administrativo](https://matriculas-ferias.jmdias2901.workers.dev/admin.html)
+[**Fazer matrícula →**](https://matriculacursoredacaoferias.jmdias2901.workers.dev) · [Painel administrativo](https://matriculacursoredacaoferias.jmdias2901.workers.dev/admin.html)
 
 </div>
 
@@ -38,6 +38,6 @@ O painel protegido reúne matrículas, dados dos alunos, responsáveis, turmas, 
 
 ## Privacidade e atendimento
 
-[Política de Privacidade](https://matriculas-ferias.jmdias2901.workers.dev/privacidade.html) · [Termos de Uso](https://matriculas-ferias.jmdias2901.workers.dev/termos.html)
+[Política de Privacidade](https://matriculacursoredacaoferias.jmdias2901.workers.dev/privacidade.html) · [Termos de Uso](https://matriculacursoredacaoferias.jmdias2901.workers.dev/termos.html)
 
 Pagamentos e dúvidas: [WhatsApp da secretaria](https://wa.me/5562981899570).
