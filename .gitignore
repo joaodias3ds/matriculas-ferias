@@ -1,1 +1,3 @@
 .wrangler/
+.admin-password.local
+.dev.vars

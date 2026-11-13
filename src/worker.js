@@ -1,37 +1,25 @@
-const limit = 30;
-const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
-const clean = (value, max = 160) => typeof value === 'string' ? value.trim().slice(0, max) : '';
-const digits = value => value.replace(/\D/g, '');
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/availability' && request.method === 'GET') {
-      const row = await env.DB.prepare('SELECT COUNT(*) AS total FROM enrollments').first();
-      return json({ remaining: Math.max(0, limit - row.total), total: limit });
-    }
-    if (url.pathname === '/api/enroll' && request.method === 'POST') {
-      let input;
-      try { input = await request.json(); } catch { return json({ error: 'Confira os dados e tente novamente.' }, 400); }
-      const name = clean(input.name), birthDate = clean(input.birthDate, 10), email = clean(input.email, 254).toLowerCase(), phone = digits(clean(input.phone, 30));
-      const guardianName = clean(input.guardianName), guardianPhone = digits(clean(input.guardianPhone, 30));
-      const school = clean(input.school), notes = clean(input.notes, 500);
-      const birth = new Date(`${birthDate}T12:00:00Z`);
-      const validDate = /^\d{4}-\d{2}-\d{2}$/.test(birthDate) && !Number.isNaN(birth.getTime()) && birth.toISOString().slice(0, 10) === birthDate && birth <= new Date();
-      const age = validDate ? (Date.now() - birth.getTime()) / 31557600000 : 0;
-      if (name.length < 3 || !validDate || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || phone.length < 10 || phone.length > 11 || (age < 18 && (guardianName.length < 3 || guardianPhone.length < 10)) || input.consent !== true) return json({ error: 'Preencha os campos obrigatórios para confirmar a matrícula.' }, 400);
-      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
-      try {
-        const result = await env.DB.prepare(`INSERT INTO enrollments (code,name,birth_date,email,phone,guardian_name,guardian_phone,school,notes,consent)
-          SELECT ?,?,?,?,?,?,?,?,?,1 WHERE (SELECT COUNT(*) FROM enrollments) < ?`)
-          .bind(code, name, birthDate, email, phone, guardianName, guardianPhone, school, notes, limit).run();
-        if (!result.meta.changes) return json({ error: 'As 30 vagas já foram preenchidas.' }, 409);
-        return json({ code, name, remaining: Math.max(0, limit - (await env.DB.prepare('SELECT COUNT(*) AS total FROM enrollments').first()).total) }, 201);
-      } catch (error) {
-        if (String(error).includes('UNIQUE')) return json({ error: 'Este e-mail já tem uma matrícula confirmada.' }, 409);
-        return json({ error: 'Não foi possível confirmar agora. Tente novamente.' }, 500);
-      }
-    }
-    if (url.pathname.startsWith('/api/')) return json({ error: 'Página não encontrada.' }, 404);
-    return env.ASSETS.fetch(request);
-  }
-};
+const LIMIT=30;
+const reply=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...headers}});
+const clean=(v,n=160)=>typeof v==='string'?v.trim().slice(0,n):'';
+const digits=v=>clean(v,30).replace(/\D/g,'');
+const phone=v=>[10,11].includes(digits(v).length);
+const enc=new TextEncoder();
+async function signature(v,secret){const k=await crypto.subtle.importKey('raw',enc.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return [...new Uint8Array(await crypto.subtle.sign('HMAC',k,enc.encode(v)))].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function isAdmin(req,env){if(!env.ADMIN_SECRET)return false;const token=(req.headers.get('cookie')||'').match(/(?:^|; )rnm_admin=([^;]+)/)?.[1];if(!token)return false;const [exp,sig]=token.split('.');return /^\d+$/.test(exp)&&Number(exp)>Date.now()&&sig===await signature(exp,env.ADMIN_SECRET)}
+async function redis(env,args){if(!env.UPSTASH_REDIS_REST_URL||!env.UPSTASH_REDIS_REST_TOKEN)return null;try{const r=await fetch(env.UPSTASH_REDIS_REST_URL,{method:'POST',headers:{authorization:'Bearer '+env.UPSTASH_REDIS_REST_TOKEN,'content-type':'application/json'},body:JSON.stringify(args)});return r.ok?(await r.json()).result:null}catch{return null}}
+async function limited(env,key,max,ttl){const n=await redis(env,['INCR',key]);if(n!==null){if(n===1)await redis(env,['EXPIRE',key,ttl]);return Number(n)>max}const now=Math.floor(Date.now()/1000);await env.DB.prepare('INSERT INTO rate_limits (key,count,expires_at) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires_at<? THEN 1 ELSE count+1 END, expires_at=CASE WHEN expires_at<? THEN ? ELSE expires_at END').bind(key,now+ttl,now,now,now+ttl).run();const row=await env.DB.prepare('SELECT count FROM rate_limits WHERE key=?').bind(key).first();return row.count>max}
+export default {async fetch(req,env){const path=new URL(req.url).pathname;
+if(path==='/api/availability'&&req.method==='GET'){const x=await env.DB.prepare('SELECT COUNT(*) total FROM applications').first();return reply({remaining:Math.max(0,LIMIT-x.total),total:LIMIT})}
+if(path==='/api/plans'&&req.method==='GET'){const x=await env.DB.prepare('SELECT id,name,description,price_cents FROM plans WHERE active=1 ORDER BY rowid').all();return reply({plans:x.results})}
+if(path==='/api/legacy'&&req.method==='POST'){const ip=req.headers.get('cf-connecting-ip')||'unknown';if(await limited(env,'lookup:'+ip,8,600))return reply({error:'Muitas tentativas. Aguarde alguns minutos.'},429);let d;try{d=await req.json()}catch{return reply({error:'Informe matrícula e celular.'},400)}const reg=clean(d.registration,30).toUpperCase(),tel=digits(d.phone);if(!/^[A-Z0-9-]{3,30}$/.test(reg)||!phone(tel))return reply({error:'Informe matrícula e celular com DDD.'},400);const x=await env.DB.prepare('SELECT * FROM legacy_students WHERE registration=? AND (phone=? OR whatsapp=? OR mother_phone=? OR father_phone=?)').bind(reg,tel,tel,tel,tel).first();if(!x)return reply({error:'Não encontramos essa combinação de matrícula e celular. Confira os dados ou comece um novo cadastro.'},404);const expiry=String(Date.now()+1800000),signed=reg+'.'+expiry;return reply({student:x,lookupToken:signed+'.'+await signature(signed,env.ADMIN_SECRET)})}
+if(path==='/api/enroll'&&req.method==='POST'){const ip=req.headers.get('cf-connecting-ip')||'unknown';if(await limited(env,'enroll:'+ip,5,3600))return reply({error:'Muitas tentativas. Tente mais tarde.'},429);let d;try{d=await req.json()}catch{return reply({error:'Confira os dados enviados.'},400)}const name=clean(d.name),age=Number(d.age),tel=digits(d.phone),wa=digits(d.whatsapp),school=clean(d.school),grade=clean(d.grade),email=clean(d.email,254).toLowerCase(),mn=clean(d.motherName),mt=digits(d.motherPhone),fn=clean(d.fatherName),ft=digits(d.fatherPhone),legacy=clean(d.legacyRegistration,30).toUpperCase()||null,courses=Array.isArray(d.courses)?[...new Set(d.courses)].sort():[];
+if(name.length<3||!Number.isInteger(age)||age<4||age>100||!phone(tel)||!phone(wa)||school.length<2||grade.length<2||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!courses.length||courses.some(x=>!['Gramática','Redação'].includes(x))||!d.privacy||!d.terms||!d.info)return reply({error:'Revise os campos obrigatórios e os aceites.'},400);
+if((mn&&!phone(mt))||(fn&&!phone(ft))||(!mn&&mt)||(!fn&&ft))return reply({error:'Informe nome e celular juntos para cada responsável.'},400);
+const plan=await env.DB.prepare('SELECT * FROM plans WHERE id=? AND active=1').bind(clean(d.planId,30)).first();if(!plan)return reply({error:'Selecione um plano.'},400);if((plan.id==='redacao'&&courses.join()!=='Redação')||(plan.id==='gramatica'&&courses.join()!=='Gramática')||(plan.id==='completo'&&courses.length!==2))return reply({error:'O plano não corresponde aos cursos.'},400);
+if(legacy){const [reg,expiry,sig]=clean(d.lookupToken,200).split('.'),signed=reg+'.'+expiry;if(reg!==legacy||!/^\d+$/.test(expiry)||Number(expiry)<Date.now()||sig!==await signature(signed,env.ADMIN_SECRET))return reply({error:'Busque novamente sua matrícula anterior.'},400)}
+const code='FER-'+crypto.randomUUID().slice(0,8).toUpperCase(),at=new Date().toISOString();try{const x=await env.DB.prepare('INSERT INTO applications (protocol,legacy_registration,student_name,student_age,phone,whatsapp,school,grade,mother_name,mother_phone,father_name,father_phone,courses,plan_id,plan_name,plan_price_cents,email,privacy_accepted_at,terms_accepted_at,info_accepted_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM applications)<30').bind(code,legacy,name,age,tel,wa,school,grade,mn,mt,fn,ft,JSON.stringify(courses),plan.id,plan.name,plan.price_cents,email,at,at,at).run();if(!x.meta.changes)return reply({error:'As 30 vagas foram preenchidas.'},409);return reply({protocol:code,name},201)}catch(e){if(String(e).includes('UNIQUE'))return reply({error:'Esta matrícula anterior já foi utilizada.'},409);return reply({error:'Não foi possível confirmar agora.'},500)}}
+if(path==='/api/admin/login'&&req.method==='POST'){const ip=req.headers.get('cf-connecting-ip')||'unknown';if(await limited(env,'admin:'+ip,8,900))return reply({error:'Muitas tentativas. Aguarde 15 minutos.'},429);let d;try{d=await req.json()}catch{return reply({error:'Informe a senha.'},400)}if(!env.ADMIN_SECRET||d.password!==env.ADMIN_SECRET)return reply({error:'Acesso não autorizado.'},401);const exp=String(Date.now()+28800000),sig=await signature(exp,env.ADMIN_SECRET);return reply({ok:true},200,{'set-cookie':'rnm_admin='+exp+'.'+sig+'; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=28800'})}
+if(path==='/api/admin/logout'&&req.method==='POST')return reply({ok:true},200,{'set-cookie':'rnm_admin=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0'});
+if(path.startsWith('/api/admin/')){if(!await isAdmin(req,env))return reply({error:'Acesso não autorizado.'},401);if(path==='/api/admin/applications'&&req.method==='GET'){const x=await env.DB.prepare('SELECT * FROM applications ORDER BY created_at DESC LIMIT 30').all();return reply({applications:x.results})}if(path==='/api/admin/plans'&&req.method==='PUT'){let d;try{d=await req.json()}catch{return reply({error:'Dados inválidos.'},400)}if(!['redacao','gramatica','completo'].includes(d.id)||!(d.priceCents===null||Number.isInteger(d.priceCents)&&d.priceCents>=0&&d.priceCents<=10000000))return reply({error:'Plano ou valor inválido.'},400);await env.DB.prepare('UPDATE plans SET price_cents=? WHERE id=?').bind(d.priceCents,d.id).run();return reply({ok:true})}}
+if(path.startsWith('/api/'))return reply({error:'Recurso não encontrado.'},404);return env.ASSETS.fetch(req)
+}};
