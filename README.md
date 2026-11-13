@@ -1,30 +1,32 @@
 # Matrícula de férias — Redação Nota Mil
 
-Sistema público de matrícula de férias, com prioridade para celular, oito etapas de preenchimento e uma nona tela de finalização. O projeto usa a identidade visual oficial em `public/`, Cloudflare Workers para a API e Cloudflare D1 como banco principal. O código está em `https://github.com/joaodias3ds/matriculas-ferias`.
+Sistema público de matrícula de férias, com prioridade para celular, dez etapas de preenchimento e uma tela de finalização. O visual usa os arquivos originais de `RNM - Matricula`, Cloudflare Workers para a API e Cloudflare D1 como banco principal. O código está em `https://github.com/joaodias3ds/matriculas-ferias`.
 
 ## O que o aluno faz
 
 1. Escolhe se já tem matrícula. Nesse caso, informa o número e um celular que conste no cadastro antigo. A busca só devolve o registro se os dois dados coincidirem.
-2. Confere ou informa nome, idade, telefone, WhatsApp, escola e série. Quem veio da base antiga pode corrigir os campos.
+2. Confere ou informa nome, nascimento, e-mail, telefone, WhatsApp, Instagram, escola e série. A idade é calculada da data de nascimento. Quem veio da base antiga pode corrigir os campos.
 3. Confere ou informa nome e telefone da mãe e do pai. A etapa é opcional, mas cada responsável preenchido precisa ter nome e celular juntos.
-4. Seleciona Redação, Gramática ou os dois.
-5. Confere o plano e o valor correspondente.
-6. Informa um e-mail válido.
-7. Revê todos os dados.
-8. Lê e aceita os informativos, a Política de Privacidade e os Termos de Uso.
-9. Recebe na tela um protocolo de matrícula confirmada e links de retorno e contato.
+4. Seleciona Redação (segunda, 19h–20h), Gramática (sexta, 19h–20h30) ou os dois.
+5. Lê as informações dos cursos e dos grupos de avisos.
+6. Escolhe a modalidade e confere o valor total.
+7. Informa preferência de pagamento: Pix, cartão ou dinheiro. Pode solicitar nota fiscal.
+8. Confirma o e-mail digitando-o novamente.
+9. Revê todos os dados.
+10. Lê e aceita os informativos, a Política de Privacidade e os Termos de Uso.
+11. Recebe na tela um protocolo de matrícula confirmada e links de retorno e contato.
 
 A tela final é exibida apenas após o registro no banco. O limite de 30 vagas é verificado na mesma instrução de inserção que cria a matrícula. Uma matrícula antiga só pode ser usada uma vez. O envio automático de e-mail depende da configuração do provedor; sem ela, a confirmação imediata é o protocolo na tela.
 
 ## Cursos e valores
 
-| Plano | Encontros | Valor |
-| --- | --- | ---: |
-| Redação | Segundas-feiras, dois encontros em novembro e dois em dezembro de 2026 | R$ 200,00 |
-| Gramática | Sextas-feiras, dois encontros em novembro e dois em dezembro de 2026 | R$ 200,00 |
-| Redação + Gramática | Os dois cursos, quatro encontros cada | R$ 400,00 |
+| Modalidade | Valor por curso | Condição |
+| --- | ---: | --- |
+| 1 — Divulgação + indicação | R$ 150,00 | Ajudar na divulgação e indicar um novo aluno que efetive a matrícula; disponível até o dia 5 de cada mês. |
+| 2 — Divulgação | R$ 200,00 | Ajudar na divulgação do curso. |
+| 3 — Normal | R$ 200,00 | Sem compromisso de divulgação. |
 
-Datas exatas, horários e condições de pagamento não foram informados e não são inventados pelo sistema. O administrador pode alterar os valores em `/admin.html` antes de novas matrículas. Cada inscrição guarda um retrato do plano e valor selecionados no momento da confirmação; alterações posteriores não mudam registros anteriores.
+Cada curso tem quatro encontros, dois em novembro e dois em dezembro de 2026. Redação é segunda-feira, 19h–20h; Gramática é sexta-feira, 19h–20h30. O valor total é o valor da modalidade multiplicado pelo número de cursos. Datas exatas e regras detalhadas de pagamento serão informadas pela equipe. O administrador pode alterar os valores das modalidades em `/admin.html` para novas matrículas. Cada inscrição guarda o valor confirmado; alterações posteriores não mudam registros anteriores.
 
 ## Estrutura
 
@@ -33,6 +35,7 @@ Datas exatas, horários e condições de pagamento não foram informados e não 
 - `public/privacidade.html`, `termos.html`: páginas de informação ao aluno.
 - `src/worker.js`: API, validação no servidor, autenticação e limite de vagas.
 - `schema-v2.sql`: tabelas de matrículas, alunos antigos, planos e limite de tentativas.
+- `schema-v3.sql`: nascimento, Instagram, modalidade, pagamento, aceites adicionais e modalidades com valores.
 - `scripts/import-legacy.mjs`: importação local dos JSONs antigos.
 - `wrangler.jsonc`: configuração de Worker e banco D1. O ID do banco não é uma senha.
 
@@ -40,7 +43,7 @@ A tabela `enrollments` de `schema.sql` pertence à primeira versão e fica apena
 
 ## Dados antigos e privacidade
 
-A origem usada nesta instalação é `D:\João - Computador\Redação Nota Mil - 2027\dados e chaves\Alunos JSON`. Foram importados 145 registros da exportação do sistema antigo. O importador lê `_indice.json` e cada arquivo de aluno e transfere apenas número da matrícula, nome, idade calculada, telefone, escola, série e nomes/telefones da mãe e do pai. CPF, RG, financeiro, frequência, endereços e chaves não são importados. Os JSONs originais não são adicionados ao Git.
+A origem usada nesta instalação é `D:\João - Computador\Redação Nota Mil - 2027\dados e chaves\Alunos JSON`. Foram importados 145 registros da exportação do sistema antigo. O importador lê `_indice.json` e cada arquivo de aluno e transfere apenas número da matrícula, nome, nascimento, e-mail, idade calculada, telefone, escola, série e nomes/telefones da mãe e do pai. CPF, RG, financeiro, frequência, endereços e chaves não são importados. Os JSONs originais não são adicionados ao Git.
 
 A importação cria um SQL temporário no diretório de arquivos temporários do sistema, envia ao D1 e remove o arquivo em seguida. Mantenha o computador e a conta Cloudflare protegidos. A busca pública exige matrícula mais um celular cadastrado e limita tentativas por IP. O Redis pode executar esse limite de tentativas; sem Redis, o D1 executa o mesmo limite.
 
@@ -60,6 +63,7 @@ No PowerShell, na raiz do projeto:
 ```powershell
 npm install
 npx wrangler d1 execute matriculas-ferias --local --file schema-v2.sql
+npx wrangler d1 execute matriculas-ferias --local --file schema-v3.sql
 npm run dev
 ```
 
@@ -77,6 +81,7 @@ A instância atual já usa o banco `matriculas-ferias`. Em uma instalação nova
 
 ```powershell
 npx wrangler d1 execute matriculas-ferias --remote --file schema-v2.sql
+npx wrangler d1 execute matriculas-ferias --remote --file schema-v3.sql
 node scripts/import-legacy.mjs 'D:\João - Computador\Redação Nota Mil - 2027\dados e chaves\Alunos JSON' --remote
 npx wrangler secret put ADMIN_SECRET
 npm run deploy
@@ -84,7 +89,7 @@ npm run deploy
 
 O comando do segredo pede o valor sem gravá-lo no código. Nesta instalação, a senha gerada está somente no arquivo local `.admin-password.local`, ignorado pelo Git. Guarde-a em um gerenciador de senhas e remova a cópia local quando não precisar dela. Para trocar a senha, rode novamente `npx wrangler secret put ADMIN_SECRET` e informe a nova senha. Isso encerra a validade dos cookies antigos.
 
-O endereço atual é `https://matriculas-ferias.jmdias2901.workers.dev`. Depois da publicação, confira `/api/availability`, `/api/plans`, o formulário e `/admin.html`. Evite enviar uma matrícula fictícia no ambiente publicado: ela consumirá uma das 30 vagas.
+O endereço atual é `https://matriculas-ferias.jmdias2901.workers.dev`. Depois da publicação, confira `/api/availability`, `/api/modalities`, o formulário e `/admin.html`. `schema-v3.sql` contém `ALTER TABLE` e deve ser executado uma única vez por banco. Evite enviar uma matrícula fictícia no ambiente publicado: ela consumirá uma das 30 vagas.
 
 ## Redis
 
@@ -104,19 +109,20 @@ Use a URL REST `https://...` e o token REST da sua instância. Nunca use uma URL
 
 ## Administração
 
-Acesse `/admin.html` e use a senha administrativa. O painel lista até 30 matrículas e mostra protocolo, matrícula anterior, aluno, idade, contatos, escola, série, responsáveis, cursos, plano, valor, e-mail e horários dos três aceites. Os registros vêm do servidor apenas após autenticação. A sessão dura oito horas e pode ser encerrada pelo botão Sair.
+Acesse `/admin.html` e use a senha administrativa. O painel lista até 30 matrículas e mostra protocolo, matrícula anterior, nascimento, idade, contatos, Instagram, escola, série, responsáveis, turmas, modalidade, valor, preferência de pagamento, nota fiscal e horários dos aceites. Os registros vêm do servidor apenas após autenticação. A sessão dura oito horas e pode ser encerrada pelo botão Sair.
 
-O painel permite ajustar preços para futuras inscrições. Não envia e-mail, não recebe pagamentos e não sincroniza alterações de volta ao sistema antigo. Se precisar corrigir um registro já confirmado, faça isso com cuidado diretamente no D1, mantendo um backup e um histórico da alteração.
+O painel permite ajustar o valor por curso de cada modalidade para futuras inscrições. Não recebe pagamentos e não sincroniza alterações de volta ao sistema antigo. Se precisar corrigir um registro já confirmado, faça isso com cuidado diretamente no D1, mantendo um backup e um histórico da alteração.
 
 ## API e validação
 
 - `GET /api/availability`: vagas restantes.
 - `GET /api/plans`: planos ativos e valores públicos.
+- `GET /api/modalities`: modalidades e preços por curso.
 - `POST /api/legacy`: busca protegida por matrícula e celular.
 - `POST /api/enroll`: valida todos os campos no servidor e cria a matrícula.
 - `POST /api/admin/login`, `POST /api/admin/logout`: sessão administrativa.
 - `GET /api/admin/applications`: registros completos, apenas administrador.
-- `PUT /api/admin/plans`: alteração de valores, apenas administrador.
+- `PUT /api/admin/modalities`: alteração de valores das modalidades, apenas administrador.
 
 A validação no navegador ajuda o aluno, mas a decisão final é sempre do servidor. A API não fornece uma lista pública de alunos. Mensagens de erro não expõem dados do banco. Solicitações administrativas usam cookie de sessão restrito ao caminho `/api/admin`.
 
