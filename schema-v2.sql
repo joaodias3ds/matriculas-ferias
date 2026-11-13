@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS applications (
  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_legacy ON applications(legacy_registration) WHERE legacy_registration IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_student_phone ON applications(lower(student_name),phone);
 CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS plans (
  id TEXT PRIMARY KEY,
