@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS tracking (registration TEXT PRIMARY KEY,name TEXT NOT NULL,paid INTEGER NOT NULL DEFAULT 0,value_cents INTEGER NOT NULL DEFAULT 0,redacao TEXT NOT NULL DEFAULT '[false,false,false,false]',gramatica TEXT NOT NULL DEFAULT '[false,false,false,false]',internal_status TEXT NOT NULL DEFAULT '',updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
