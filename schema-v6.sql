@@ -1,0 +1,2 @@
+ALTER TABLE tracking ADD COLUMN redacao_enabled INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE tracking ADD COLUMN gramatica_enabled INTEGER NOT NULL DEFAULT 1;
