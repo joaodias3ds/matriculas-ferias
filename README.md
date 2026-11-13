@@ -44,7 +44,7 @@ A origem usada nesta instalação é `D:\João - Computador\Redação Nota Mil -
 
 A importação cria um SQL temporário no diretório de arquivos temporários do sistema, envia ao D1 e remove o arquivo em seguida. Mantenha o computador e a conta Cloudflare protegidos. A busca pública exige matrícula mais um celular cadastrado e limita tentativas por IP. O Redis pode executar esse limite de tentativas; sem Redis, o D1 executa o mesmo limite.
 
-A página de privacidade descreve o tratamento atual. A equipe deve revisar o texto e a política de retenção antes de divulgar o link amplamente, sobretudo porque há dados de menores. O formulário usa armazenamento local só para lembrar a leitura do aviso de cookies. A sessão administrativa usa cookie essencial `HttpOnly`, `Secure` e `SameSite=Strict`. Não há analytics ou cookies de publicidade.
+O rascunho local é opcional, expira em até sete dias e é apagado após a confirmação. Não salva a prova de busca da matrícula antiga; ao retomar, o aluno deve confirmar matrícula e celular novamente. A página de privacidade descreve o tratamento atual. A equipe deve revisar o texto e a política de retenção antes de divulgar o link amplamente, sobretudo porque há dados de menores. O formulário usa armazenamento local para o aviso de cookies e, somente se o aluno escolher, para o rascunho. A sessão administrativa usa cookie essencial `HttpOnly`, `Secure` e `SameSite=Strict`. Não há analytics ou cookies de publicidade.
 
 ## Requisitos
 
@@ -88,9 +88,11 @@ O endereço atual é `https://matriculas-ferias.jmdias2901.workers.dev`. Depois 
 
 ## Redis
 
-Redis é **opcional e ainda não está conectado**, porque não existe uma instância nem credenciais fornecidas. O sistema está preparado para Upstash Redis via REST. Redis é usado para contadores temporários de tentativas de busca, envio e login; os cadastros e o total de vagas permanecem no D1, que é a fonte de verdade. Em falha ou ausência do Redis, os contadores são mantidos no D1 para que a proteção não desapareça.
+Uma instância **Upstash Redis gratuita** foi conectada ao Worker por URL REST e token gravados como segredos da Cloudflare. Redis guarda apenas contadores temporários de tentativas de busca, envio e login. As chaves usam HMAC do IP; o endereço IP não é enviado em texto aberto ao Redis. O contador e sua expiração são atualizados em uma única operação Lua (`EVAL`). Cadastros e vagas permanecem no D1, que é a fonte de verdade. Em falha ou ausência do Redis, os contadores são mantidos no D1 para que a proteção não desapareça.
 
-Para conectar uma instância Upstash, configure os dois segredos no Worker:
+**Ação necessária para manter o Redis:** a instância gratuita criada sem cadastro expira após 72 horas, a menos que seja vinculada a uma conta Upstash gratuita. O link de vinculação está apenas no arquivo local `.redis-claim.local`, ignorado pelo Git. Abra-o e vincule a instância sem selecionar plano pago. Se não fizer isso, o formulário continuará funcionando com o limite de tentativas pelo D1.
+
+Para substituir a instância por outra Upstash, configure os dois segredos no Worker:
 
 ```powershell
 npx wrangler secret put UPSTASH_REDIS_REST_URL

@@ -1,3 +1,5 @@
 .wrangler/
 .admin-password.local
 .dev.vars
+.redis-setup.local
+.redis-claim.local
