@@ -14,7 +14,7 @@ Sistema público de matrícula de férias, com prioridade para celular, oito eta
 8. Lê e aceita os informativos, a Política de Privacidade e os Termos de Uso.
 9. Recebe na tela um protocolo de matrícula confirmada e links de retorno e contato.
 
-A tela final é exibida apenas após o registro no banco. O limite de 30 vagas é verificado na mesma instrução de inserção que cria a matrícula. Uma matrícula antiga só pode ser usada uma vez. O sistema **ainda não envia e-mail automático**: o endereço é armazenado para contato e a confirmação imediata é o protocolo na tela.
+A tela final é exibida apenas após o registro no banco. O limite de 30 vagas é verificado na mesma instrução de inserção que cria a matrícula. Uma matrícula antiga só pode ser usada uma vez. O envio automático de e-mail depende da configuração do provedor; sem ela, a confirmação imediata é o protocolo na tela.
 
 ## Cursos e valores
 
@@ -122,7 +122,19 @@ A validação no navegador ajuda o aluno, mas a decisão final é sempre do serv
 
 Faça backup do D1 antes de mudanças de esquema e mantenha os JSONs antigos fora do repositório. Para conferir o total sem listar dados pessoais, use `/api/availability`. Revise mensalmente os preços e o texto dos encontros: esta versão descreve novembro e dezembro de 2026. Atualize os informativos, termos e planos para uma nova turma. Não reutilize uma implantação antiga com dados de alunos sem revisar finalidade, retenção e permissões de acesso.
 
-Para suporte ao aluno, o link final abre o WhatsApp institucional `(62) 98189-9570`. Não há envio automático de e-mail nem integração de pagamento nesta versão.
+Para suporte ao aluno, o link final abre o WhatsApp institucional `(62) 98189-9570`. Não há integração de pagamento nesta versão.
+
+## Ativar e-mail de confirmação
+
+A integração opcional usa Resend e envia ao aluno apenas nome e protocolo. Configure um domínio remetente verificado no provedor e depois grave os segredos no Worker:
+
+```powershell
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put CONFIRMATION_FROM
+npm run deploy
+```
+
+Use em `CONFIRMATION_FROM` um endereço autorizado pelo seu domínio. Sem estes segredos, o formulário continua registrando as vagas e informa que o protocolo na tela é a confirmação. Falha de e-mail não desfaz uma matrícula já registrada.
 
 Dos 145 cadastros antigos, 104 têm pelo menos um celular válido para a busca automática. Os outros 41 precisam de atendimento da equipe para confirmar a identidade; o sistema não libera dados somente pelo número da matrícula.
 
